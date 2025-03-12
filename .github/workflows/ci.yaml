@@ -18,29 +18,17 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # For information about the runner images and the software each image contains,
-          # refer to: https://github.com/actions/runner-images
-          - os: macos-14
-            xcode: 15.4
-            platform: "iOS Simulator,OS=17.5,name=iPhone 15 Pro"
-          - os: macos-14
-            xcode: 15.4
-            platform: "macOS"
-          - os: macos-14
-            xcode: 15.4
-            platform: "macOS,variant=Mac Catalyst"
-          - os: macos-14
-            xcode: 15.4
-            platform: "visionOS Simulator,name=Apple Vision Pro"
-          - os: macos-15
-            xcode: 16.2
-            platform: "iOS Simulator,OS=18.1,name=iPhone 16 Pro"
-          - os: macos-15
-            xcode: 16.2
-            platform: "macOS"
-          - os: macos-15
-            xcode: 16.2
-            platform: "macOS,variant=Mac Catalyst"
+            # For information about the runner images and the software each image contains,
+            # refer to: https://github.com/actions/runner-images
+            - os: macos-15
+              xcode: 16.2
+              sdk: xrsimulator2.2
+            - os: macos-15
+              xcode: 16.2
+              sdk: macosx15.2
+            - os: macos-15
+              xcode: 16.2
+              sdk: iphoneos18.2
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     defaults:
@@ -68,18 +56,11 @@ jobs:
           xcodebuild -version
           xcrun swift --version
 
-      # Cache key cannot contains commas
-      - name: Generate Cache Key
-        id: cache-key
-        run: |
-          SANITIZED_PLATFORM=$(echo "${{ matrix.platform }}" | tr ',' '-')
-          echo "key=xcode-${{ matrix.xcode }}-${SANITIZED_PLATFORM}" >> $GITHUB_OUTPUT
-
       - name: Cache
         uses: irgaly/xcode-cache@v1
         with:
-          key: ${{ steps.cache-key.outputs.key }}-${{ github.sha }}
-          restore-keys: ${{ steps.cache-key.outputs.key }}-
+          key: xcode-${{ matrix.xcode }}-${{ matrix.sdk }}-${{ github.sha }}
+          restore-keys: xcode-${{ matrix.xcode }}-${{ matrix.sdk }}-
 
       - name: Write Default Config
         run: cd VoiceAssistant && cat .env.example.xcconfig > .env.xcconfig
@@ -89,7 +70,7 @@ jobs:
           set -o pipefail && xcodebuild build-for-testing \
             -project ${{ env.XCODE_PROJECT }} \
             -scheme ${{ env.XCODE_SCHEME }} \
-            -destination 'platform=${{ matrix.platform }}' \
+            -sdk ${{ matrix.sdk }} \
             CODE_SIGN_IDENTITY="" | xcbeautify --renderer github-actions
 
       ## This project does not currently have tests
@@ -100,7 +81,7 @@ jobs:
       #    set -o pipefail && xcodebuild test-without-building \
       #      -project ${{ env.XCODE_PROJECT }} \
       #      -scheme ${{ env.XCODE_SCHEME }} \
-      #      -destination 'platform=${{ matrix.platform }}' \
+      #      --sdk ${{ matrix.sdk }} \
       #      -parallel-testing-enabled YES \
       #      -parallel-testing-worker-count 4 | xcbeautify --renderer github-actions
 
@@ -109,8 +90,8 @@ jobs:
           set -o pipefail && xcodebuild build \
             -project ${{ env.XCODE_PROJECT }} \
             -scheme ${{ env.XCODE_SCHEME }} \
+            -sdk ${{ matrix.sdk }} \
             -configuration Release \
-            -destination 'platform=${{ matrix.platform }}' \
             CODE_SIGN_IDENTITY="" | xcbeautify --renderer github-actions
   lint:
     name: Lint
