@@ -28,7 +28,7 @@ jobs:
               sdk: macosx15.2
             - os: macos-15
               xcode: 16.2
-              sdk: iphoneos18.2
+              sdk: iphonesimulator18.2
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     defaults:
